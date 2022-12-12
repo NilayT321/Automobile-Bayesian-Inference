@@ -1,0 +1,74 @@
+---
+title: "960:365 -- Final Project"
+author: "Nilay Tripathi"
+date: "12/8/2022"
+output: html_document
+---
+
+```{r warning=F, message=F}
+# Load necessary packages
+library(bayesrules)
+library(bayesplot)
+library(rstanarm)
+library(tidyverse)
+library(tidybayes)
+library(broom.mixed)
+library(gridExtra)
+```
+
+# Importing and Cleaning Data
+
+## Importing the Dataset
+```{r}
+# Define column names
+column_names = c("Symboling", "Normalized_Losses", "Make", "Fuel_Type", "Aspiration", "Num_Doors", "Body_Style", "Drive_Wheels", "Engine_Location", "Wheel_Base", "Length", "Width", "Height", "Curb_Weight", "Engine_Type", "Num_Cylinders", "Engine_Size", "Fuel_System", "Bore", "Stroke", "Compression", "Horsepower", "Peak_RPM", "City_MPG", "Highway_MPG", "Price")
+
+# Read the data
+cars_data = read_csv("imports-85.data", col_names = column_names)
+
+# Take a peek at the data
+head(cars_data)
+```
+
+## Data Cleaning
+
+The data in its current form is very messy. We will now clean the data
+```{r}
+# The values with a '?' for normalized losses are unknown. Remove them from the data set
+cars_df = cars_data %>% 
+  filter(Normalized_Losses != "?")
+head(cars_df)
+# Compare number of observations left
+c(nrow(cars_data), nrow(cars_df))
+# Overall summary for the different columns
+summary(cars_df)
+# See number of different makes
+cars_df %>%
+  janitor::tabyl(Make)
+# Make a new column called Average_MPG that is the arithmetic mean of the city and highway MPG
+cars_df = cars_df %>%
+  mutate(Avg_MPG = (City_MPG + Highway_MPG) / 2)
+summary(cars_df$Avg_MPG)
+# Some of the numeric values have character values. We should change this 
+cars_df = cars_df %>%
+  mutate(across(.cols = c(2, 19,20,21,22,23,24,26), as.numeric))
+# Summary 
+summary(cars_df)
+# Extra NA values have been identified in column 20. Remove them 
+cars_df = cars_df %>% 
+  filter(!is.na(Stroke))
+summary(cars_df)
+```
+
+# Building a Model
+
+```{r}
+unique(cars_df$Fuel_Type)
+unique(cars_df$Body_Style)
+unique(cars_df$Engine_Type)
+unique(cars_df$Fuel_System)
+```
+
+
+
+
