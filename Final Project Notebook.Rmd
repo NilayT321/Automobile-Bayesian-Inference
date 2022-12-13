@@ -83,7 +83,7 @@ From the plot, it appears that there is also an interaction effect in the model.
 
 ## Fitting the No-Interaction Model
 Here we will fit the model without interaction effects. 
-```{r cache = T}
+```{r cache = T, results=FALSE}
 no_interaction = stan_glm(
   Normalized_Losses ~ Price + Aspiration,
   data = cars_df, family = gaussian,
@@ -151,7 +151,7 @@ no_interaction_df %>%
 ## Fitting the Interaction Model
 
 The graph indicates that there could be an interaction between these models. Let's fit an interaction model to see if it is better than the non-interaction one 
-```{r}
+```{r cache = T, results = FALSE}
 interaction_model = stan_glm(
   Normalized_Losses ~ Aspiration + Price + Aspiration:Price, 
   data = cars_df, family = gaussian, 
@@ -190,5 +190,44 @@ rhat(interaction_model)
 Here is the `tidy` summary for this model.
 ```{r}
 tidy(interaction_model, effects = c("fixed", "aux"), conf.int = TRUE, conf.level = 0.80)
+```
+
+### Interpretation of Coefficients
+
+Here are the interpretation of the coefficients from the interaction model 
+
+# Comparing the Models
+
+Now we will compare the interaction and no-interaction models using cross validation and ELPD techniques. 
+
+## Cross Validation
+
+We will employ 10-fold cross validation to compare the models 
+```{r cahce = T}
+set.seed(12345)
+
+# No interaction model
+no_interact_cv = prediction_summary_cv(model = no_interaction, data = cars_df, k = 10)
+
+# Interaction model
+interaction_cv = prediction_summary_cv(model = interaction_model, data = cars_df, k = 10)
+
+# Show summaries 
+no_interact_cv$cv
+interaction_cv$cv
+```
+
+## Expected Log-Predictive Density (ELPD)
+```{r}
+# Find the ELPD's for the two models
+no_interact_loo = loo(no_interaction)
+interaction_loo = loo(interaction_model)
+
+# Print out estimates
+no_interact_loo$estimates
+interaction_loo$estimates
+
+# Compare the models
+loo_compare(no_interact_loo, interaction_loo)
 ```
 
