@@ -14,6 +14,7 @@ library(tidyverse)
 library(tidybayes)
 library(broom.mixed)
 library(gridExtra)
+library(janitor)
 ```
 
 # Importing and Cleaning Data
@@ -62,13 +63,132 @@ summary(cars_df)
 
 # Building a Model
 
+We will build a model for `Normalized_Losses`. We will utilize the predictors `price` along with the categorical predictor `Aspiration`.
+
+## Initial Plotting
+
 ```{r}
-unique(cars_df$Fuel_Type)
-unique(cars_df$Body_Style)
-unique(cars_df$Engine_Type)
-unique(cars_df$Fuel_System)
+ggplot(data = cars_df, aes(x = Price, y = Normalized_Losses, color = Aspiration)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+
+# Summary of the values of the cars by fuel type 
+cars_df %>% 
+  group_by(Aspiration) %>%
+  summarize(avg = mean(Normalized_Losses), 
+            n = n())
 ```
 
+From the plot, it appears that there is also an interaction effect in the model. We will assess the usefulness of two models: one with interaction and one without interaction. From the graph, we can see that the linear relationship isn't strong for both variables. 
 
+## Fitting the No-Interaction Model
+Here we will fit the model without interaction effects. 
+```{r cache = T}
+no_interaction = stan_glm(
+  Normalized_Losses ~ Price + Aspiration,
+  data = cars_df, family = gaussian,
+  prior_intercept = normal(120, 5, autoscale = TRUE),
+  prior = normal(0, 2.5, autoscale = TRUE),
+  prior_aux = exponential(1, autoscale = TRUE),
+  chains = 4, iter = 5000*2, seed = 12345
+)
+```
 
+### Prior Summary
+
+Here is the prior summary 
+```{r}
+prior_summary(no_interaction)
+```
+
+### MCMC Diagnostics
+
+Here are the MCMC diagnostics for this model
+```{r}
+# Trace plots
+mcmc_trace(no_interaction, size = 0.1)
+
+# Density overlays
+mcmc_dens_overlay(no_interaction)
+
+# Autocorrelation plots
+mcmc_acf(no_interaction)
+
+# Effective Sample Size ratio
+neff_ratio(no_interaction)
+
+# Rhat 
+rhat(no_interaction)
+```
+
+### Numerical Output
+
+Generate the numerical output of the model using the `tidy` function.
+```{r}
+tidy(no_interaction, effects = c("fixed", "aux"), conf.int = TRUE, conf.level = 0.80)
+```
+
+The output indicates that `Price` is significant (although barely since the coefficients are still pretty close to 0). The categorical variable `Aspiration` does not appear to be significant. We will now calculate the probabilities of these coefficients
+
+### Assessing the Regression Coefficients
+
+We will find the probability that the regression coefficient of `Price` is greater than 0 in our posterior prediction. 
+```{r}
+no_interaction_df = as.data.frame(no_interaction, include = FALSE)
+head(no_interaction_df)
+
+# Probability that Price coefficient is greater than 0
+no_interaction_df %>% 
+  mutate(regGreaterThan0 = (Price > 0)) %>%
+  tabyl(regGreaterThan0)
+
+# Probability that Aspirationturbo coefficient is greater than 0
+no_interaction_df %>%
+  mutate(aspirationGreaterThan0 = (Aspirationturbo > 0)) %>%
+  tabyl(aspirationGreaterThan0)
+```
+
+## Fitting the Interaction Model
+
+The graph indicates that there could be an interaction between these models. Let's fit an interaction model to see if it is better than the non-interaction one 
+```{r}
+interaction_model = stan_glm(
+  Normalized_Losses ~ Aspiration + Price + Aspiration:Price, 
+  data = cars_df, family = gaussian, 
+  prior_intercept = normal(120, 5, autoscale = TRUE),
+  prior = normal(0, 2.5, autoscale = TRUE),
+  prior_aux = exponential(1, autoscale = TRUE),
+  chains = 4, iter = 5000*2, seed = 12345
+)
+```
+
+### Prior Summary
+```{r}
+prior_summary(interaction_model)
+```
+
+### MCMC Diagnostics 
+```{r}
+# Trace plots
+mcmc_trace(interaction_model, size = 0.1)
+
+# Density overlays
+mcmc_dens_overlay(interaction_model)
+
+# Autocorrelation plots
+mcmc_acf(interaction_model)
+
+# Effective sample size ratio
+neff_ratio(interaction_model)
+
+# Rhat value
+rhat(interaction_model)
+```
+
+### Numerical Output
+
+Here is the `tidy` summary for this model.
+```{r}
+tidy(interaction_model, effects = c("fixed", "aux"), conf.int = TRUE, conf.level = 0.80)
+```
 
