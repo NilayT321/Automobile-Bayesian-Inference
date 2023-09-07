@@ -2,7 +2,7 @@
 title: "960:365 -- Final Project"
 author: "Nilay Tripathi"
 date: "12/8/2022"
-output: html_document
+output: beamer_presentation
 ---
 
 
@@ -24,10 +24,6 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
 ```
 
 # Importing and Cleaning Data
-
-## Information About The Data Set
-
-I got this data set from the UCI Machine Learning Repository. The data set's page can be found [here](https://archive.ics.uci.edu/ml/datasets/automobile). This data set consists of numerous parameters regarding the operation of a car (such as mileage, engine type, fuel type, and a bunch of measurements about the cars). The data set also gives the normalized loss for each car. According to the data set's page on the UCI Machine Learning Repository, the normalized loss of a vehicle is the loss in payment per insured vehicle year. Furthermore, this value has been scaled for all vehicles of a specific type, to allow for better comparison. 
 
 ## Importing the Dataset
 ```{r}
